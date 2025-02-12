@@ -227,7 +227,7 @@ classdef SLAMSystem < ebe.slam.SLAMSystem
                 obj.landmarkIDStateVectorMap = insert(obj.landmarkIDStateVectorMap, newLandmarks(o), offset);
                 J = eye(length(obj.x));
                 K = zeros(length(obj.x), 2);
-                obj.x = [obj.x; event.data(:,o)];
+                obj.x = [obj.x; obj.x(1:2)+event.data(:,o)];
 
                 J = [J; J(1:2,:)];
                 K = [K; eye(2)];

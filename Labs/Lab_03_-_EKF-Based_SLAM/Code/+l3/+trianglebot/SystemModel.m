@@ -208,7 +208,7 @@ classdef SystemModel < handle
             % ACTIVITY 5: COMPLETE THE IMPLEMENTATION BY COMPUTING THE
             % VALUES OF gradHx, gradHm AND gradHw
             gradHx = zeros(2, 3);
-            gradHx = [ -dXY(1)/r, -dXY(2)/r, 0; dXY(2)/r2, dXY(1)/r2, -1];
+            gradHx = [ -dXY(1)/r, -dXY(2)/r, 0; dXY(2)/r2, -dXY(1)/r2, -1];
 
             gradHm = zeros(2);
             gradHm = -gradHx(:, 1:2);

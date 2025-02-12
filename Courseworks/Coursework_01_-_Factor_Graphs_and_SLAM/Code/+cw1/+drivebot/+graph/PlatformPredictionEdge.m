@@ -10,7 +10,7 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
     %
     %   M = [cos(theta) -sin(theta) 0; sin(theta) cos(theta) 0;0 0 1];
     %
-    % The new state is predicted from 
+    % The new state is predicted from
     %
     %   x_(k+1) = x_(k) + M * [vx;vy;theta]
     %
@@ -43,12 +43,12 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             % Outputs:
             %   obj - (handle)
             %       An instance of a PlatformPredictionEdge
-
+            
             assert(dT >= 0);
-            obj = obj@g2o.core.BaseBinaryEdge(3);            
+            obj = obj@g2o.core.BaseBinaryEdge(3);
             obj.dT = dT;
         end
-       
+        
         function initialEstimate(obj)
             % INITIALESTIMATE Compute the initial estimate of a platform.
             %
@@ -58,12 +58,33 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             % Description:
             %   Compute the initial estimate of the platform x_(k+1) given
             %   an estimate of the platform at time x_(k) and the control
-            %   input u_(k+1)
-
-            warning('PlatformPredictionEdge.initialEstimate: implement')
-
-            % Compute the posterior assming no noise
-            obj.edgeVertices{2}.x = zeros(3, 1);
+            %   input u_(k+1), following the process model described in
+            %   PlatformPredictionEdge.
+            
+            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
+                error('PlatformPredictionEdge:initialEstimate', 'Insufficient vertices for estimation.');
+            end
+            
+            % Extract the current state x_k
+            x_k = obj.edgeVertices{1}.x;  % x_k = [x; y; theta]
+            
+            % Extract control input u_k
+            u_k = obj.z;  % u_k = [s_k; 0; psi_k]
+            
+            % Extract time step length
+            dT = obj.dT;
+            
+            % Compute rotation matrix M_k
+            theta_k = x_k(3);  % Extract orientation angle
+            M_k = [cos(theta_k), -sin(theta_k), 0;
+                sin(theta_k),  cos(theta_k), 0;
+                0, 0, 1];
+            
+            % Predict next state x_(k+1)
+            x_kp1 = x_k + dT * M_k * u_k;
+            
+            % Assign predicted state to the next vertex
+            obj.edgeVertices{2}.x = x_kp1;
         end
         
         function computeError(obj)
@@ -74,34 +95,69 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             %
             % Description:
             %   Compute the value of the error, which is the difference
-            %   between the measurement and the parameter state in the
-            %   vertex. Note the error enters in a nonlinear manner, so the
-            %   equation has to be rearranged to make the error the subject
-            %   of the formulat
-                       
-            warning('PlatformPredictionEdge.computeError: implement')
-
-            obj.errorZ = 0;
+            %   between the expected and actual state transition.
+            
+            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
+                error('PlatformPredictionEdge:computeError', 'Insufficient vertices for error computation.');
+            end
+            
+            % Extract the states
+            x_k = obj.edgeVertices{1}.x;  % x_k = [x; y; theta]
+            x_kp1 = obj.edgeVertices{2}.x; % x_(k+1)
+            
+            % Extract control input u_k
+            if isempty(obj.z)
+                warning('PlatformPredictionEdge:computeError', 'Control input z is empty. Setting default u_k = [0; 0; 0].');
+                u_k = zeros(3,1);
+            else
+                u_k = obj.z; % Assume z is the control input u_k
+            end
+            
+            % Extract time step length
+            dT = obj.dT;
+            
+            % Compute rotation matrix M_k
+            theta_k = x_k(3);  % Extract orientation angle
+            M_k = [cos(theta_k), -sin(theta_k), 0;
+                sin(theta_k),  cos(theta_k), 0;
+                0, 0, 1];
+            
+            % Compute predicted next state
+            x_kp1_pred = x_k + dT * M_k * u_k;
+            
+            % Compute error
+            obj.errorZ = M_k \ (x_kp1 - x_kp1_pred);
         end
         
-        % Compute the Jacobians
         function linearizeOplus(obj)
             % LINEARIZEOPLUS Compute the Jacobians for the edge.
             %
             % Syntax:
-            %   obj.computeError();
+            %   obj.linearizeOplus();
             %
             % Description:
-            %   Compute the Jacobians for the edge. Since we have two
-            %   vertices which contribute to the edge, the Jacobians with
-            %   respect to both of them must be computed.
-            %
-
-            warning('PlatformPredictionEdge.linearizeOplus: implement')
-
-            obj.J{1} = -eye(3);
-
-            obj.J{2} = eye(3);
+            %   Compute the Jacobians for the edge based on the current estimate.
+            
+            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
+                error('PlatformPredictionEdge:linearizeOplus', 'Insufficient vertices for Jacobian computation.');
+            end
+            
+            % Extract the current state x_k
+            x_k = obj.edgeVertices{1}.x;
+            
+            % Compute rotation matrix M_k
+            theta_k = x_k(3);
+            M_k = [cos(theta_k), -sin(theta_k), 0;
+                sin(theta_k),  cos(theta_k), 0;
+                0, 0, 1];
+            
+            % Compute the inverse of M_k
+            M_k_inv = inv(M_k);
+            
+            % Compute Jacobians
+            obj.J{1} = -M_k_inv;  % Jacobian with respect to x_k
+            obj.J{2} = M_k_inv;   % Jacobian with respect to x_(k+1)
         end
-    end    
+        
+    end
 end
