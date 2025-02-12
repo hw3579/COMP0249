@@ -60,10 +60,7 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             %   an estimate of the platform at time x_(k) and the control
             %   input u_(k+1), following the process model described in
             %   PlatformPredictionEdge.
-            
-            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
-                error('PlatformPredictionEdge:initialEstimate', 'Insufficient vertices for estimation.');
-            end
+        
             
             % Extract the current state x_k
             x_k = obj.edgeVertices{1}.x;  % x_k = [x; y; theta]
@@ -97,21 +94,14 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             %   Compute the value of the error, which is the difference
             %   between the expected and actual state transition.
             
-            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
-                error('PlatformPredictionEdge:computeError', 'Insufficient vertices for error computation.');
-            end
             
             % Extract the states
             x_k = obj.edgeVertices{1}.x;  % x_k = [x; y; theta]
             x_kp1 = obj.edgeVertices{2}.x; % x_(k+1)
             
             % Extract control input u_k
-            if isempty(obj.z)
-                warning('PlatformPredictionEdge:computeError', 'Control input z is empty. Setting default u_k = [0; 0; 0].');
-                u_k = zeros(3,1);
-            else
-                u_k = obj.z; % Assume z is the control input u_k
-            end
+            u_k = obj.z; % Assume z is the control input u_k
+
             
             % Extract time step length
             dT = obj.dT;
@@ -137,10 +127,6 @@ classdef PlatformPredictionEdge < g2o.core.BaseBinaryEdge
             %
             % Description:
             %   Compute the Jacobians for the edge based on the current estimate.
-            
-            if isempty(obj.edgeVertices) || length(obj.edgeVertices) < 2
-                error('PlatformPredictionEdge:linearizeOplus', 'Insufficient vertices for Jacobian computation.');
-            end
             
             % Extract the current state x_k
             x_k = obj.edgeVertices{1}.x;

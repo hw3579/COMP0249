@@ -61,11 +61,20 @@ classdef LandmarkRangeBearingEdge < g2o.core.BaseBinaryEdge
             % Description:
             %   Compute the initial estimate of the landmark given the
             %   platform pose and observation.
+            
 
-            warning('LandmarkRangeBearingEdge.initialEstimate: implement')
+            x_k1 = obj.edgeVertices{1}.x;
+            r = obj.z(1); 
+            beta = obj.z(2); 
+            lx = x_k1(1) + r*cos(x_k1(3) + beta);
+            ly = x_k1(2) + r*sin(x_k1(3) + beta);
+            lbeta = beta + x_k1(3);
+            
+            obj.edgeVertices{2}.x = [lx; ly; lbeta];
+            obj.edgeVertices{2}.setEstimate([lx; ly]);
 
-            lx = obj.edgeVertices{1}.x(1:2);
-            obj.edgeVertices{2}.setEstimate(lx);
+            
+
         end
         
         function computeError(obj)
@@ -78,9 +87,11 @@ classdef LandmarkRangeBearingEdge < g2o.core.BaseBinaryEdge
             %   Compute the value of the error, which is the difference
             %   between the predicted and actual range-bearing measurement.
 
-            warning('LandmarkRangeBearingEdge.computeError: implement')
-           
-            obj.errorZ = zeros(2, 1);
+            dx = obj.edgeVertices{2}.x(1) - obj.edgeVertices{1}.x(1);
+            dy = obj.edgeVertices{2}.x(2) - obj.edgeVertices{1}.x(2);
+            r_pred = sqrt(dx^2 + dy^2);
+            beta_pred = atan2(dy, dx) - obj.edgeVertices{1}.x(3);
+            obj.errorZ = [r_pred; wrapToPi(beta_pred)] - obj.z;
         end
         
         function linearizeOplus(obj)
@@ -94,11 +105,23 @@ classdef LandmarkRangeBearingEdge < g2o.core.BaseBinaryEdge
             %   the vertex.
             %
 
-            warning('LandmarkRangeBearingEdge.linearizeOplus: implement')
+            x_k1 = obj.edgeVertices{1}.x;
+            x_kp1 = obj.edgeVertices{2}.x;
+            dx = x_k1(1) - x_kp1(1);
+            dy = x_k1(2) - x_kp1(2);
+            q = dx^2 + dy^2;
+            r = sqrt(q);
 
-            obj.J{1} = eye(2, 3);
+            J1 = [-dx/r, -dy/r, 0; 
+                    dy/q, -dx/q, -1];
+            J2 = [dx/r, dy/r; 
+                    -dy/q, dx/q];
+
+            obj.J{1} = J1;
+            obj.J{2} = J2;
+            % obj.J{1} = eye(2, 3);
             
-            obj.J{2} = eye(2);
+            % obj.J{2} = eye(2);
         end        
     end
 end
